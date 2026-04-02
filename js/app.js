@@ -53,7 +53,12 @@ async function update() {
     const atrPct = atrValue != null ? (atrValue / currentPrice * 100) : null;
 
     // Strategy detection
-    const orb = detectORB(klines[0], currentPrice);
+    // ORB: use the first candle of the current UTC day (not oldest candle in window)
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayStartMs = todayStart.getTime();
+    const orbCandle = klines.find(k => k[0] >= todayStartMs) || klines[0];
+    const orb = detectORB(orbCandle, currentPrice);
     const vwapState = detectVWAP(currentPrice, prevClose, vwap[n], vwap[n - 1]);
     const emaState = detectEMACross(ema9[n], ema21[n], ema9[n - 1], ema21[n - 1]);
 
@@ -87,7 +92,8 @@ async function update() {
       atrPct,
       ema9: ema9[n],
       ema21: ema21[n],
-      macd: { macd: macd.macd[n], signal: macd.signal[n] }
+      macd: { macd: macd.macd[n], signal: macd.signal[n] },
+      macdPrev: { macd: macd.macd[n - 1], signal: macd.signal[n - 1] }
     });
 
     updateORBPanel(orb, currentPrice);
@@ -130,9 +136,9 @@ function findSwingLows(lows, closes, window) {
     }
     if (isLow) swings.push(lows[i]);
   }
-  // Sort ascending (nearest to current price first) and dedupe
+  // Sort ascending (nearest below current price first)
   const current = closes[closes.length - 1];
-  return [...new Set(swings)].sort((a, b) => Math.abs(a - current) - Math.abs(b - current));
+  return [...new Set(swings)].filter(l => l < current).sort((a, b) => b - a);
 }
 
 /**

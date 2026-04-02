@@ -32,7 +32,7 @@ export function updateRefreshCountdown(seconds) {
 
 // ─── Metrics Row ───
 
-export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, ema9, ema21, macd }) {
+export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, ema9, ema21, macd, macdPrev }) {
   const priceEl = document.getElementById('m-price');
   const changeEl = document.getElementById('m-change');
   const rangeLow = document.getElementById('range-low');
@@ -78,9 +78,18 @@ export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, ema9, ema21,
   }
   if (macdSig) macdSig.textContent = 'Sig: ' + macd.signal.toFixed(2);
   if (macdBadge) {
-    const cross = macd.macd > macd.signal ? 'Golden Cross' : 'Death Cross';
-    macdBadge.textContent = cross;
-    macdBadge.className = 'badge ' + (macd.macd > macd.signal ? 'badge-bull' : 'badge-bear');
+    const aboveSignal = macd.macd > macd.signal;
+    let label, type;
+    if (macdPrev && macdPrev.macd <= macdPrev.signal && aboveSignal) {
+      label = 'Bullish Cross'; type = 'bull';
+    } else if (macdPrev && macdPrev.macd >= macdPrev.signal && !aboveSignal) {
+      label = 'Bearish Cross'; type = 'bear';
+    } else {
+      label = aboveSignal ? 'Bullish' : 'Bearish';
+      type = aboveSignal ? 'bull' : 'bear';
+    }
+    macdBadge.textContent = label;
+    macdBadge.className = 'badge badge-' + type;
   }
 }
 
@@ -212,7 +221,7 @@ export function updateVerdict(macd15m, macd1h) {
         <div class="text-sm font-semibold text-white mt-1">${is15mBull ? 'Bullish' : 'Bearish'}</div>
       </div>
       <div class="text-right">
-        <div class="text-xs text-[#8b949e]">MACD ${is15mBull ? 'Golden' : 'Death'} Cross</div>
+        <div class="text-xs text-[#8b949e]">MACD ${is15mBull ? 'Bullish' : 'Bearish'}</div>
         <div class="text-xs mono mt-1" style="color:var(--accent-${is15mBull ? 'green' : 'red'})">${is15mBull ? '1' : '0'} Bull / ${is15mBull ? '0' : '1'} Bear</div>
       </div>`;
   }
@@ -225,7 +234,7 @@ export function updateVerdict(macd15m, macd1h) {
         <div class="text-sm font-semibold text-white mt-1">${is1hBull ? 'Bullish' : 'Bearish'}</div>
       </div>
       <div class="text-right">
-        <div class="text-xs text-[#8b949e]">MACD ${is1hBull ? 'Golden' : 'Death'} Cross</div>
+        <div class="text-xs text-[#8b949e]">MACD ${is1hBull ? 'Bullish' : 'Bearish'}</div>
         <div class="text-xs mono mt-1" style="color:var(--accent-${is1hBull ? 'green' : 'red'})">${is1hBull ? '1' : '0'} Bull / ${is1hBull ? '0' : '1'} Bear</div>
       </div>`;
   }
