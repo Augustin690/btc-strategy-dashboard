@@ -79,14 +79,23 @@ export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, ema9, ema21,
   if (macdSig) macdSig.textContent = 'Sig: ' + macd.signal.toFixed(2);
   if (macdBadge) {
     const aboveSignal = macd.macd > macd.signal;
+    const aboveZero = macd.macd >= 0;
+    const isCrossUp = macdPrev && macdPrev.macd <= macdPrev.signal && aboveSignal;
+    const isCrossDown = macdPrev && macdPrev.macd >= macdPrev.signal && !aboveSignal;
     let label, type;
-    if (macdPrev && macdPrev.macd <= macdPrev.signal && aboveSignal) {
-      label = 'Bullish Cross'; type = 'bull';
-    } else if (macdPrev && macdPrev.macd >= macdPrev.signal && !aboveSignal) {
+    if (isCrossUp) {
+      label = aboveZero ? 'Bullish Cross' : 'Recovering';
+      type = aboveZero ? 'bull' : 'neutral';
+    } else if (isCrossDown) {
       label = 'Bearish Cross'; type = 'bear';
+    } else if (aboveZero && aboveSignal) {
+      label = 'Bullish'; type = 'bull';
+    } else if (aboveZero && !aboveSignal) {
+      label = 'Weakening'; type = 'neutral';
+    } else if (!aboveZero && aboveSignal) {
+      label = 'Recovering'; type = 'neutral';
     } else {
-      label = aboveSignal ? 'Bullish' : 'Bearish';
-      type = aboveSignal ? 'bull' : 'bear';
+      label = 'Bearish'; type = 'bear';
     }
     macdBadge.textContent = label;
     macdBadge.className = 'badge badge-' + type;
