@@ -16,17 +16,28 @@ export function computeEMA(data, period) {
 }
 
 /**
- * Volume-Weighted Average Price
+ * Volume-Weighted Average Price (resets at UTC day boundaries)
  * @param {number[]} highs
  * @param {number[]} lows
  * @param {number[]} closes
  * @param {number[]} volumes
+ * @param {number[]} timestamps - candle open timestamps (ms)
  * @returns {number[]}
  */
-export function computeVWAP(highs, lows, closes, volumes) {
+export function computeVWAP(highs, lows, closes, volumes, timestamps) {
   const vwap = [];
   let cumTPV = 0, cumVol = 0;
+  let currentDay = timestamps ? new Date(timestamps[0]).getUTCDate() : -1;
   for (let i = 0; i < closes.length; i++) {
+    // Reset accumulation at UTC day boundary
+    if (timestamps) {
+      const day = new Date(timestamps[i]).getUTCDate();
+      if (day !== currentDay) {
+        cumTPV = 0;
+        cumVol = 0;
+        currentDay = day;
+      }
+    }
     const tp = (highs[i] + lows[i] + closes[i]) / 3;
     cumTPV += tp * volumes[i];
     cumVol += volumes[i];
@@ -131,11 +142,11 @@ export function computeMACD(data) {
  * @returns {object} All computed indicator arrays
  */
 export function computeAll(ohlcv, config) {
-  const { closes, highs, lows, volumes } = ohlcv;
+  const { closes, highs, lows, volumes, timestamps } = ohlcv;
   return {
     ema9: computeEMA(closes, config.emaPeriods.fast),
     ema21: computeEMA(closes, config.emaPeriods.slow),
-    vwap: computeVWAP(highs, lows, closes, volumes),
+    vwap: computeVWAP(highs, lows, closes, volumes, timestamps),
     bb: computeBB(closes, config.bbPeriod, config.bbMult),
     rsi: computeRSI(closes, config.rsiPeriod),
     atr: computeATR(highs, lows, closes, config.atrPeriod),
