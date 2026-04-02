@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC/USDT Strategy Dashboard — Live</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #06090f; --bg-secondary: #0d1117; --bg-tertiary: #161b22;
+  --border: #21262d; --accent-green: #00ff88; --accent-red: #ff3b5c;
+  --accent-blue: #58a6ff; --accent-yellow: #ffd866; --accent-purple: #bc8cff;
+  --accent-orange: #ff9e64; --text-primary: #e6edf3; --text-secondary: #8b949e; --text-dim: #484f58;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-primary); }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: all 0.3s ease; }
+.card:hover { border-color: #30363d; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+.pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+.badge-bull { background: rgba(0,255,136,0.12); color: var(--accent-green); }
+.badge-bear { background: rgba(255,59,92,0.12); color: var(--accent-red); }
+.badge-neutral { background: rgba(88,166,255,0.12); color: var(--accent-blue); }
+.signal-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; background: var(--bg-tertiary); margin-bottom: 8px; border-left: 3px solid transparent; transition: all 0.2s; }
+.signal-row:hover { background: #1c2128; }
+.signal-row.bullish { border-left-color: var(--accent-green); }
+.signal-row.bearish { border-left-color: var(--accent-red); }
+.signal-row.neutral { border-left-color: var(--accent-blue); }
+.metric-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.metric-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg-primary); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.fade-in { opacity: 0; animation: fadeIn 0.6s ease forwards; }
+@keyframes fadeIn { to { opacity: 1; } }
+.stagger-1 { animation-delay: 0.1s; } .stagger-2 { animation-delay: 0.2s; } .stagger-3 { animation-delay: 0.3s; } .stagger-4 { animation-delay: 0.4s; }
+</style>
+</head>
+<body class="bg-[#06090f] text-gray-200 min-h-screen">
+
+<div id="status-bar" class="fixed top-0 left-0 right-0 z-50 text-center py-1 text-xs mono" style="background:var(--bg-secondary);display:none;"></div>
+
+<!-- Header -->
+<div class="max-w-[1440px] mx-auto px-6 pt-6 pb-2 fade-in">
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff9e64] to-[#ff3b5c] flex items-center justify-center">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white tracking-tight">BTC/USDT Strategy Dashboard</h1>
+        <p class="text-xs text-[#8b949e] mt-0.5">ORB + VWAP Reclaim + EMA Crossover <span class="mono">15m</span> &middot; Next refresh: <span class="mono" id="refresh-countdown">60s</span></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#161b22] border border-[#21262d]">
+        <span class="w-2 h-2 rounded-full bg-[#00ff88] pulse"></span>
+        <span class="text-xs text-[#8b949e]">Live</span>
+      </div>
+      <div class="px-3 py-1.5 rounded-lg bg-[#161b22] border border-[#21262d] mono text-xs text-[#8b949e]" id="timestamp">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics Row -->
+<div class="max-w-[1440px] mx-auto px-6 py-4">
+  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+    <div class="card fade-in stagger-1">
+      <div class="metric-label mb-2">Price</div>
+      <div class="metric-value text-white mono" id="m-price">--</div>
+      <div class="flex items-center gap-1 mt-2"><span class="text-xs mono" id="m-change" style="color:var(--accent-blue)">--</span><span class="text-xs text-[#484f58]">24h</span></div>
+    </div>
+    <div class="card fade-in stagger-1">
+      <div class="metric-label mb-2">24h Range</div>
+      <div class="text-sm mono text-white font-semibold" id="range-low">--</div>
+      <div class="w-full h-1.5 rounded bg-[#21262d] mt-2 mb-1 overflow-hidden"><div class="h-full rounded bg-gradient-to-r from-[#ff3b5c] via-[#ffd866] to-[#00ff88]" id="range-bar" style="width:50%"></div></div>
+      <div class="text-sm mono text-white font-semibold text-right" id="range-high">--</div>
+    </div>
+    <div class="card fade-in stagger-2">
+      <div class="metric-label mb-2">RSI (14)</div>
+      <div class="metric-value mono" style="color:var(--accent-blue)" id="rsi-value">--</div>
+      <div class="mt-2"><span class="badge badge-neutral" id="rsi-badge">--</span></div>
+    </div>
+    <div class="card fade-in stagger-2">
+      <div class="metric-label mb-2">ATR (14)</div>
+      <div class="metric-value mono text-[#ffd866]" id="atr-value">--</div>
+      <div class="text-xs text-[#8b949e] mt-2 mono" id="atr-pct">--</div>
+    </div>
+    <div class="card fade-in stagger-3">
+      <div class="metric-label mb-2">EMA 9 / 21</div>
+      <div class="text-sm mono text-white font-semibold" id="ema-values">-- / --</div>
+      <div class="mt-2"><span class="badge badge-neutral" id="ema-metric-badge">--</span></div>
+    </div>
+    <div class="card fade-in stagger-3">
+      <div class="metric-label mb-2">MACD (15m)</div>
+      <div class="text-sm mono font-semibold" id="macd-value">--</div>
+      <div class="text-xs text-[#8b949e] mt-1 mono" id="macd-signal">--</div>
+      <div class="mt-1"><span class="badge badge-neutral" id="macd-badge">--</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Chart -->
+<div class="max-w-[1440px] mx-auto px-6 py-2">
+  <div class="card fade-in stagger-4" style="padding:16px">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-semibold text-white">BTC/USDT</span>
+        <span class="mono text-xs text-[#8b949e]">15m Candles &middot; 24h</span>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="background:var(--accent-blue)"></span><span class="text-[#8b949e]">EMA9</span></span>
+        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="background:var(--accent-purple)"></span><span class="text-[#8b949e]">EMA21</span></span>
+        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="background:var(--accent-yellow)"></span><span class="text-[#8b949e]">VWAP</span></span>
+        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="background:var(--accent-orange);opacity:0.5"></span><span class="text-[#8b949e]">ORB Range</span></span>
+        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="background:rgba(88,166,255,0.2)"></span><span class="text-[#8b949e]">BB Bands</span></span>
+      </div>
+    </div>
+    <div id="main-chart" style="width:100%;height:480px;"></div>
+  </div>
+</div>
+
+<!-- Strategy Panels -->
+<div class="max-w-[1440px] mx-auto px-6 py-4">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card fade-in" id="orb-panel">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(255,158,100,0.12)">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#ff9e64" stroke-width="2"/><path d="M3 9h18M9 3v18" stroke="#ff9e64" stroke-width="2"/></svg>
+          </div>
+          <span class="text-sm font-bold text-white">Opening Range Breakout</span>
+        </div>
+        <span class="badge badge-neutral" id="orb-badge">--</span>
+      </div>
+      <div class="space-y-3" id="orb-details"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+    <div class="card fade-in" id="vwap-panel">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(255,216,102,0.12)">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M3 12h4l3-9 4 18 3-9h4" stroke="#ffd866" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <span class="text-sm font-bold text-white">VWAP Reclaim</span>
+        </div>
+        <span class="badge badge-neutral" id="vwap-badge">--</span>
+      </div>
+      <div class="space-y-3" id="vwap-details"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+    <div class="card fade-in" id="ema-panel">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(188,140,255,0.12)">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M4 20C8 14 12 10 20 4" stroke="#bc8cff" stroke-width="2" stroke-linecap="round"/><path d="M4 16C8 12 14 10 20 8" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <span class="text-sm font-bold text-white">EMA Crossover</span>
+        </div>
+        <span class="badge badge-neutral" id="ema-badge">--</span>
+      </div>
+      <div class="space-y-3" id="ema-details"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Signal Log + RSI Chart + Multi-TF Verdict -->
+<div class="max-w-[1440px] mx-auto px-6 py-2 pb-10">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card fade-in lg:col-span-1">
+      <div class="text-sm font-bold text-white mb-3">Signal Log</div>
+      <div class="space-y-1 max-h-[300px] overflow-y-auto" id="signal-log"><div class="text-xs text-[#484f58] text-center py-8">Loading...</div></div>
+    </div>
+    <div class="card fade-in lg:col-span-1">
+      <div class="text-sm font-bold text-white mb-3">RSI (14) &middot; 15m</div>
+      <div id="rsi-chart" style="width:100%;height:260px;"></div>
+    </div>
+    <div class="card fade-in lg:col-span-1">
+      <div class="text-sm font-bold text-white mb-3">Multi-Timeframe Verdict</div>
+      <div class="space-y-3">
+        <div class="signal-row neutral" id="verdict-15m"><div class="flex-1"><div class="text-xs text-[#8b949e]">15m Timeframe</div><div class="text-sm font-semibold text-white mt-1">Loading...</div></div></div>
+        <div class="signal-row neutral" id="verdict-1h"><div class="flex-1"><div class="text-xs text-[#8b949e]">1h Timeframe</div><div class="text-sm font-semibold text-white mt-1">Loading...</div></div></div>
+        <div class="divider"></div>
+        <div class="signal-row neutral" id="verdict-composite"><div class="flex-1"><div class="text-xs text-[#8b949e]">Composite</div><div class="text-sm font-semibold text-white mt-1">Loading...</div></div></div>
+        <div class="divider"></div>
+        <div class="p-3 rounded-lg" style="background:var(--bg-tertiary)">
+          <div class="text-xs text-[#8b949e] mb-2">Key Levels</div>
+          <div class="grid grid-cols-2 gap-2 mono text-xs" id="key-levels"><div>--</div><div>--</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
