@@ -2,6 +2,10 @@
 
 Live trading strategy dashboard for BTC/USDT tracking three intraday strategies with auto-refresh from the Binance public API.
 
+<img width="1768" height="1311" alt="screenshot1" src="https://github.com/user-attachments/assets/9738dd14-3cb3-4192-904b-60b5f0a5b257" />
+<img width="1770" height="1103" alt="screenshot2" src="https://github.com/user-attachments/assets/0f85a514-4e25-488f-8de8-ea7b3dd116ac" />
+
+
 ## Strategies
 
 - **Opening Range Breakout (ORB)** — Detects breakouts above/below the first 15m candle's high/low
