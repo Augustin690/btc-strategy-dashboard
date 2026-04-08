@@ -4,12 +4,19 @@ import { CONFIG, fmtTime } from './config.js';
 import { fetchAll, parseOHLCV, fetchKlines } from './data.js';
 import { computeAll, computeMACD } from './indicators.js';
 import { detectORB, detectVWAP, detectEMACross, scanSignals } from './strategies.js';
-import { renderMainChart, renderRsiChart } from './charts.js';
+import { renderMainChart, renderRsiChart, renderDepthChart, renderHeatmapChart } from './charts.js';
 import {
   updateTimestamp, updateRefreshCountdown, updateMetrics,
   updateORBPanel, updateVWAPPanel, updateEMAPanel,
-  updateSignalLog, updateVerdict, updateKeyLevels, showStatus
+  updateSignalLog, updateVerdict, updateKeyLevels, showStatus,
+  updateImbalancePanel, updateOBVwapPanel, updateSlippagePanel,
+  updateToxicityPanel, updateDepthSpread
 } from './ui.js';
+import {
+  fetchOrderBook, fetchRecentTrades,
+  computeImbalance, computeOBVwap, computeSlippage, computeVPIN,
+  buildDepthData, buildHeatmapData
+} from './orderbook.js';
 
 let refreshTimer = null;
 let countdownTimer = null;
@@ -118,12 +125,51 @@ async function update() {
 
     renderRsiChart({ categories, rsi });
 
+    // ── Order Book Analytics (non-blocking — don't fail main update) ──
+    updateOrderBook(currentPrice).catch(err => {
+      console.warn('Order book update failed:', err.message);
+    });
+
     showStatus('');
 
   } catch (err) {
     console.error('Update failed:', err);
     showStatus('Update failed: ' + err.message + ' — retrying...', true);
   }
+}
+
+/**
+ * Fetch and render order book analytics (runs independently from main cycle)
+ */
+async function updateOrderBook(currentPrice) {
+  const [ob, trades] = await Promise.all([
+    fetchOrderBook(1000),
+    fetchRecentTrades(1000),
+  ]);
+
+  const { bids, asks } = ob;
+  const midPrice = bids.length > 0 && asks.length > 0
+    ? (bids[0][0] + asks[0][0]) / 2
+    : currentPrice;
+
+  // Compute indicators
+  const imbalance = computeImbalance(bids, asks, midPrice);
+  const obVwap = computeOBVwap(bids, asks);
+  const slippage = computeSlippage(bids, asks, midPrice, [1, 5, 10, 25]);
+  const vpin = computeVPIN(trades, 20);
+  const { bidDepth, askDepth } = buildDepthData(bids, asks);
+  const heatmap = buildHeatmapData(bids, asks, midPrice, 50);
+
+  // Update UI
+  updateImbalancePanel(imbalance);
+  updateOBVwapPanel(obVwap, midPrice);
+  updateSlippagePanel(slippage);
+  updateToxicityPanel(vpin);
+  updateDepthSpread(bids[0][0], asks[0][0]);
+
+  // Render charts
+  renderDepthChart({ bidDepth, askDepth, midPrice });
+  renderHeatmapChart({ bins: heatmap.bins, maxVol: heatmap.maxVol, midPrice });
 }
 
 /**

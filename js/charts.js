@@ -4,6 +4,8 @@ import { fmtTime, fmt, COLORS } from './config.js';
 
 let mainChart = null;
 let rsiChart = null;
+let depthChart = null;
+let heatmapChart = null;
 
 /**
  * Initialize or get the main chart instance
@@ -158,6 +160,166 @@ export function renderRsiChart({ categories, rsi }) {
           { yAxis: 30, lineStyle: { color: 'rgba(0,255,136,0.4)' }, label: { formatter: '30', color: COLORS.green, fontSize: 9 } },
           { yAxis: 50, lineStyle: { color: 'rgba(72,79,88,0.3)' }, label: { show: false } }
         ]
+      }
+    }]
+  };
+
+  chart.setOption(option, true);
+}
+
+// ─── Depth Chart ───
+
+function getDepthChart() {
+  if (!depthChart) {
+    const dom = document.getElementById('depth-chart');
+    if (!dom) return null;
+    depthChart = echarts.init(dom, null, { renderer: 'svg' });
+    window.addEventListener('resize', () => depthChart && depthChart.resize());
+  }
+  return depthChart;
+}
+
+/**
+ * Render order book depth chart (cumulative bid/ask volume)
+ */
+export function renderDepthChart({ bidDepth, askDepth, midPrice }) {
+  const chart = getDepthChart();
+  if (!chart) return;
+
+  // Reverse bids so price goes low→high
+  const bidData = bidDepth.slice().reverse();
+
+  const option = {
+    backgroundColor: 'transparent',
+    animation: false,
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#161b22',
+      borderColor: '#21262d',
+      textStyle: { color: '#e6edf3', fontFamily: 'JetBrains Mono', fontSize: 11 },
+      formatter(params) {
+        const p = params[0];
+        if (!p) return '';
+        return `Price: $${fmt(p.value[0])}<br/>Cumulative: ${p.value[1].toFixed(3)} BTC<br/><span style="color:${p.seriesName === 'Bids' ? COLORS.green : COLORS.red}">${p.seriesName}</span>`;
+      }
+    },
+    grid: { left: 50, right: 50, top: 20, bottom: 30 },
+    xAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#21262d' } },
+      axisLabel: { color: '#484f58', fontSize: 9, fontFamily: 'JetBrains Mono', formatter: v => '$' + (v / 1000).toFixed(1) + 'k' },
+      splitLine: { lineStyle: { color: '#161b22' } },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#21262d' } },
+      axisLabel: { color: '#484f58', fontSize: 9, fontFamily: 'JetBrains Mono' },
+      splitLine: { lineStyle: { color: '#161b22' } },
+    },
+    series: [
+      {
+        name: 'Bids',
+        type: 'line',
+        data: bidData,
+        step: 'end',
+        lineStyle: { color: COLORS.green, width: 1.5 },
+        areaStyle: { color: 'rgba(0,255,136,0.08)' },
+        symbol: 'none',
+      },
+      {
+        name: 'Asks',
+        type: 'line',
+        data: askDepth,
+        step: 'start',
+        lineStyle: { color: COLORS.red, width: 1.5 },
+        areaStyle: { color: 'rgba(255,59,92,0.08)' },
+        symbol: 'none',
+      },
+      {
+        // Mid price marker
+        type: 'line',
+        data: [[midPrice, 0]],
+        markLine: {
+          silent: true, symbol: 'none',
+          lineStyle: { color: COLORS.yellow, type: 'dashed', width: 1 },
+          data: [{ xAxis: midPrice, label: { formatter: 'Mid', color: COLORS.yellow, fontSize: 9, fontFamily: 'JetBrains Mono' } }]
+        }
+      }
+    ]
+  };
+
+  chart.setOption(option, true);
+}
+
+// ─── Heatmap Chart ───
+
+function getHeatmapChart() {
+  if (!heatmapChart) {
+    const dom = document.getElementById('heatmap-chart');
+    if (!dom) return null;
+    heatmapChart = echarts.init(dom, null, { renderer: 'svg' });
+    window.addEventListener('resize', () => heatmapChart && heatmapChart.resize());
+  }
+  return heatmapChart;
+}
+
+/**
+ * Render order book heatmap — horizontal bar chart with volume intensity
+ */
+export function renderHeatmapChart({ bins, maxVol, midPrice }) {
+  const chart = getHeatmapChart();
+  if (!chart) return;
+
+  // Sort bins by price
+  const sorted = bins.slice().sort((a, b) => a.price - b.price);
+
+  const prices = sorted.map(b => '$' + fmt(b.price));
+  const barData = sorted.map(b => ({
+    value: b.vol,
+    itemStyle: {
+      color: b.side === 'bid'
+        ? `rgba(0,255,136,${0.15 + 0.85 * (b.vol / maxVol)})`
+        : `rgba(255,59,92,${0.15 + 0.85 * (b.vol / maxVol)})`
+    }
+  }));
+
+  const option = {
+    backgroundColor: 'transparent',
+    animation: false,
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#161b22',
+      borderColor: '#21262d',
+      textStyle: { color: '#e6edf3', fontFamily: 'JetBrains Mono', fontSize: 11 },
+      formatter(params) {
+        const p = params[0];
+        if (!p) return '';
+        const bin = sorted[p.dataIndex];
+        return `${p.name}<br/>Volume: ${p.value.toFixed(3)} BTC<br/><span style="color:${bin.side === 'bid' ? COLORS.green : COLORS.red}">${bin.side === 'bid' ? 'Bid' : 'Ask'}</span>`;
+      }
+    },
+    grid: { left: 80, right: 20, top: 10, bottom: 30 },
+    xAxis: {
+      type: 'value',
+      axisLine: { lineStyle: { color: '#21262d' } },
+      axisLabel: { color: '#484f58', fontSize: 9, fontFamily: 'JetBrains Mono' },
+      splitLine: { lineStyle: { color: '#161b22' } },
+    },
+    yAxis: {
+      type: 'category',
+      data: prices,
+      axisLine: { lineStyle: { color: '#21262d' } },
+      axisLabel: { color: '#484f58', fontSize: 8, fontFamily: 'JetBrains Mono', interval: Math.max(0, Math.floor(prices.length / 20) - 1) },
+      splitLine: { show: false },
+    },
+    series: [{
+      type: 'bar',
+      data: barData,
+      barWidth: '80%',
+      markLine: {
+        silent: true, symbol: 'none',
+        lineStyle: { color: COLORS.yellow, type: 'dashed', width: 1 },
+        data: [{ yAxis: '$' + fmt(midPrice), label: { formatter: 'Mid', color: COLORS.yellow, fontSize: 9 } }]
       }
     }]
   };
