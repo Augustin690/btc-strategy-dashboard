@@ -170,12 +170,14 @@ export function renderRsiChart({ categories, rsi }) {
 // ─── Depth Chart ───
 
 function getDepthChart() {
-  if (!depthChart) {
-    const dom = document.getElementById('depth-chart');
-    if (!dom) return null;
-    depthChart = echarts.init(dom, null, { renderer: 'svg' });
-    window.addEventListener('resize', () => depthChart && depthChart.resize());
+  const dom = document.getElementById('depth-chart');
+  if (!dom || dom.clientWidth === 0) return null;
+  if (depthChart) {
+    depthChart.resize();
+    return depthChart;
   }
+  depthChart = echarts.init(dom, null, { renderer: 'svg' });
+  window.addEventListener('resize', () => depthChart && depthChart.resize());
   return depthChart;
 }
 
@@ -206,8 +208,10 @@ export function renderDepthChart({ bidDepth, askDepth, midPrice }) {
     grid: { left: 50, right: 50, top: 20, bottom: 30 },
     xAxis: {
       type: 'value',
+      min: midPrice * 0.98,
+      max: midPrice * 1.02,
       axisLine: { lineStyle: { color: '#21262d' } },
-      axisLabel: { color: '#484f58', fontSize: 9, fontFamily: 'JetBrains Mono', formatter: v => '$' + (v / 1000).toFixed(1) + 'k' },
+      axisLabel: { color: '#484f58', fontSize: 9, fontFamily: 'JetBrains Mono', formatter: v => '$' + fmt(v) },
       splitLine: { lineStyle: { color: '#161b22' } },
     },
     yAxis: {
@@ -254,12 +258,14 @@ export function renderDepthChart({ bidDepth, askDepth, midPrice }) {
 // ─── Heatmap Chart ───
 
 function getHeatmapChart() {
-  if (!heatmapChart) {
-    const dom = document.getElementById('heatmap-chart');
-    if (!dom) return null;
-    heatmapChart = echarts.init(dom, null, { renderer: 'svg' });
-    window.addEventListener('resize', () => heatmapChart && heatmapChart.resize());
+  const dom = document.getElementById('heatmap-chart');
+  if (!dom || dom.clientWidth === 0) return null;
+  if (heatmapChart) {
+    heatmapChart.resize();
+    return heatmapChart;
   }
+  heatmapChart = echarts.init(dom, null, { renderer: 'svg' });
+  window.addEventListener('resize', () => heatmapChart && heatmapChart.resize());
   return heatmapChart;
 }
 
