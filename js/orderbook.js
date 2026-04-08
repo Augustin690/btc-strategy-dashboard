@@ -181,11 +181,11 @@ export function computeVPIN(trades, numBuckets = 20) {
 
 /**
  * Build depth chart data: cumulative bid/ask volume at each price level
- * Filtered to ±2% from midPrice to avoid extreme zoom-out
+ * Filtered to ±0.5% from midPrice for readable zoom
  * @returns {{ bidDepth: [price, cumVol][], askDepth: [price, cumVol][] }}
  */
 export function buildDepthData(bids, asks, midPrice) {
-  const rangePct = 0.02;
+  const rangePct = 0.005;
   const lo = midPrice * (1 - rangePct);
   const hi = midPrice * (1 + rangePct);
 
