@@ -208,8 +208,8 @@ export function renderDepthChart({ bidDepth, askDepth, midPrice }) {
     grid: { left: 50, right: 50, top: 20, bottom: 30 },
     xAxis: {
       type: 'value',
-      min: midPrice * 0.98,
-      max: midPrice * 1.02,
+      min: midPrice * 0.995,
+      max: midPrice * 1.005,
       axisLine: { lineStyle: { color: '#21262d' } },
       axisLabel: { color: '#484f58', fontSize: 9, fontFamily: 'JetBrains Mono', formatter: v => '$' + fmt(v) },
       splitLine: { lineStyle: { color: '#161b22' } },
