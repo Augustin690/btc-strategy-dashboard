@@ -42,7 +42,7 @@ async function update() {
 
     // Compute all indicators
     const indicators = computeAll(ohlcv, CONFIG);
-    const { ema9, ema21, vwap, bb, rsi, atr, macd } = indicators;
+    const { ema9, ema21, vwap, bb, rsi, atr, chop, macd } = indicators;
 
     // Current values
     const n = closes.length - 1;
@@ -51,6 +51,7 @@ async function update() {
     const rsiValue = rsi[n];
     const atrValue = atr[n];
     const atrPct = atrValue != null ? (atrValue / currentPrice * 100) : null;
+    const chopValue = chop[n];
 
     // Strategy detection
     // ORB: use the first candle of the current UTC day (not oldest candle in window)
@@ -90,6 +91,7 @@ async function update() {
       rsiValue,
       atrValue,
       atrPct,
+      chopValue,
       ema9: ema9[n],
       ema21: ema21[n],
       macd: { macd: macd.macd[n], signal: macd.signal[n] },
