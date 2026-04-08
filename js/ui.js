@@ -302,3 +302,125 @@ export function showStatus(msg, isError = false) {
   el.style.color = isError ? 'var(--accent-red)' : 'var(--accent-blue)';
   el.style.display = msg ? 'block' : 'none';
 }
+
+// ─── Order Book Analytics ───
+
+export function updateImbalancePanel(imbalance) {
+  const el = document.getElementById('ob-imbalance');
+  if (!el) return;
+
+  const levels = [
+    { key: 0.001, label: '±0.1%' },
+    { key: 0.005, label: '±0.5%' },
+    { key: 0.01, label: '±1.0%' },
+    { key: 0.02, label: '±2.0%' },
+  ];
+
+  let html = '';
+  for (const { key, label } of levels) {
+    const d = imbalance[key];
+    if (!d) continue;
+    const pct = (d.imbalance * 100).toFixed(1);
+    const color = d.imbalance > 0 ? 'var(--accent-green)' : d.imbalance < 0 ? 'var(--accent-red)' : 'var(--accent-blue)';
+    const bar = Math.min(Math.abs(d.imbalance) * 100, 100);
+    html += `<div class="flex items-center gap-2">
+      <span class="text-xs text-[#8b949e] w-10 shrink-0">${label}</span>
+      <div class="flex-1 h-1.5 rounded bg-[#21262d] overflow-hidden"><div class="h-full rounded" style="width:${bar}%;background:${color}"></div></div>
+      <span class="mono text-xs font-semibold w-14 text-right" style="color:${color}">${d.imbalance > 0 ? '+' : ''}${pct}%</span>
+    </div>`;
+  }
+
+  // Overall
+  const total = imbalance.total;
+  const oPct = (total.imbalance * 100).toFixed(1);
+  const oColor = total.imbalance > 0 ? 'var(--accent-green)' : total.imbalance < 0 ? 'var(--accent-red)' : 'var(--accent-blue)';
+  html += `<div class="divider" style="margin:8px 0"></div>`;
+  html += metricRow('Full Book', `${total.imbalance > 0 ? '+' : ''}${oPct}%`, oColor);
+  html += metricRow('Bid Vol', total.bidVol.toFixed(2) + ' BTC', 'var(--accent-green)');
+  html += metricRow('Ask Vol', total.askVol.toFixed(2) + ' BTC', 'var(--accent-red)');
+
+  el.innerHTML = html;
+}
+
+export function updateOBVwapPanel(obVwap, midPrice) {
+  const el = document.getElementById('ob-vwap');
+  if (!el) return;
+
+  const bidDev = midPrice > 0 ? ((obVwap.bidVwap - midPrice) / midPrice * 100).toFixed(3) : '--';
+  const askDev = midPrice > 0 ? ((obVwap.askVwap - midPrice) / midPrice * 100).toFixed(3) : '--';
+
+  el.innerHTML =
+    metricRow('Bid VWAP', '$' + fmt(obVwap.bidVwap), 'var(--accent-green)') +
+    metricRow('Ask VWAP', '$' + fmt(obVwap.askVwap), 'var(--accent-red)') +
+    metricRow('Mid VWAP', '$' + fmt(obVwap.midVwap), 'var(--accent-yellow)') +
+    `<div class="divider" style="margin:8px 0"></div>` +
+    metricRow('Bid Dev', bidDev + '%', parseFloat(bidDev) < 0 ? 'var(--accent-red)' : 'var(--accent-green)') +
+    metricRow('Ask Dev', '+' + askDev + '%', 'var(--accent-red)') +
+    metricRow('VWAP Spread', '$' + fmt(obVwap.spread));
+}
+
+export function updateSlippagePanel(slippage) {
+  const el = document.getElementById('ob-slippage');
+  if (!el) return;
+
+  let html = '<div class="text-[10px] text-[#8b949e] mb-1 uppercase tracking-wider">Buy (market)</div>';
+  for (const s of slippage.buy) {
+    const bpsColor = s.slippageBps < 5 ? 'var(--accent-green)' : s.slippageBps < 20 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    html += `<div class="flex justify-between items-center">
+      <span class="text-xs text-[#8b949e]">${s.size} BTC</span>
+      <span class="mono text-xs" style="color:${bpsColor}">${s.slippageBps.toFixed(1)} bps</span>
+    </div>`;
+  }
+  html += '<div class="divider" style="margin:8px 0"></div>';
+  html += '<div class="text-[10px] text-[#8b949e] mb-1 uppercase tracking-wider">Sell (market)</div>';
+  for (const s of slippage.sell) {
+    const bpsColor = s.slippageBps < 5 ? 'var(--accent-green)' : s.slippageBps < 20 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    html += `<div class="flex justify-between items-center">
+      <span class="text-xs text-[#8b949e]">${s.size} BTC</span>
+      <span class="mono text-xs" style="color:${bpsColor}">${s.slippageBps.toFixed(1)} bps</span>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+export function updateToxicityPanel(vpin) {
+  const el = document.getElementById('ob-toxicity');
+  if (!el) return;
+
+  const vpinPct = (vpin.vpin * 100).toFixed(1);
+  let level, levelColor, badgeType;
+  if (vpin.vpin >= 0.7) { level = 'High Toxicity'; levelColor = 'var(--accent-red)'; badgeType = 'badge-bear'; }
+  else if (vpin.vpin >= 0.4) { level = 'Moderate'; levelColor = 'var(--accent-yellow)'; badgeType = 'badge-neutral'; }
+  else { level = 'Low Toxicity'; levelColor = 'var(--accent-green)'; badgeType = 'badge-bull'; }
+
+  // Mini bar chart of recent bucket imbalances
+  const recentBuckets = vpin.buckets.slice(-10);
+  let barsHtml = '<div class="flex items-end gap-px h-8 mt-2">';
+  for (const b of recentBuckets) {
+    const h = Math.max(4, b.imbalance * 100);
+    const c = b.buyVol > b.sellVol ? 'var(--accent-green)' : 'var(--accent-red)';
+    barsHtml += `<div class="flex-1 rounded-t" style="height:${h}%;background:${c};opacity:0.6"></div>`;
+  }
+  barsHtml += '</div>';
+
+  el.innerHTML =
+    `<div class="flex items-center justify-between mb-2">
+      <div class="metric-value mono text-lg" style="color:${levelColor}">${vpinPct}%</div>
+      <span class="badge ${badgeType}">${level}</span>
+    </div>` +
+    metricRow('VPIN Score', vpin.vpin.toFixed(3), levelColor) +
+    metricRow('Buckets', vpin.buckets.length.toString()) +
+    metricRow('Avg Bucket', vpin.avgBucketSize.toFixed(3) + ' BTC') +
+    `<div class="divider" style="margin:8px 0"></div>` +
+    `<div class="text-[10px] text-[#8b949e] uppercase tracking-wider">Recent Bucket Imbalance</div>` +
+    barsHtml;
+}
+
+export function updateDepthSpread(bestBid, bestAsk) {
+  const el = document.getElementById('ob-depth-spread');
+  if (!el) return;
+  const spread = bestAsk - bestBid;
+  const spreadBps = bestBid > 0 ? (spread / bestBid * 10000).toFixed(1) : '--';
+  el.textContent = `Spread: $${fmt(spread)} (${spreadBps} bps)`;
+}

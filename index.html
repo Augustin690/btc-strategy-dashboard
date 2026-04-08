@@ -172,7 +172,7 @@ body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-primary); 
 </div>
 
 <!-- Signal Log + RSI Chart + Multi-TF Verdict -->
-<div class="max-w-[1440px] mx-auto px-6 py-2 pb-10">
+<div class="max-w-[1440px] mx-auto px-6 py-2 pb-4">
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <div class="card fade-in lg:col-span-1">
       <div class="text-sm font-bold text-white mb-3">Signal Log</div>
@@ -195,6 +195,86 @@ body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-primary); 
           <div class="grid grid-cols-2 gap-2 mono text-xs" id="key-levels"><div>--</div><div>--</div></div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Order Book Analytics Toggle -->
+<div class="max-w-[1440px] mx-auto px-6 py-2 pb-2">
+  <button id="ob-toggle" onclick="document.getElementById('ob-section').classList.toggle('hidden');this.querySelector('.ob-arrow').classList.toggle('rotate-180')" class="w-full card flex items-center justify-between cursor-pointer hover:border-[#30363d] transition-all">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(88,166,255,0.12)">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M3 3v18h18" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/><path d="M7 16l4-4 4 4 4-8" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <span class="text-sm font-bold text-white">Order Book Analytics</span>
+        <span class="text-xs text-[#8b949e] ml-2">Imbalance &middot; OB VWAP &middot; Slippage &middot; Toxicity &middot; Depth &middot; Heatmap</span>
+      </div>
+    </div>
+    <svg class="ob-arrow w-5 h-5 text-[#8b949e] transition-transform duration-300" fill="none" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
+<!-- Order Book Section (collapsed by default) -->
+<div id="ob-section" class="hidden max-w-[1440px] mx-auto px-6 pb-10">
+  <!-- Row 1: 4 metric cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <!-- Market Imbalance -->
+    <div class="card fade-in">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:rgba(0,255,136,0.12)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2v20M2 12h20" stroke="#00ff88" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="text-sm font-bold text-white">Market Imbalance</span>
+      </div>
+      <div class="space-y-2" id="ob-imbalance"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+    <!-- OB VWAP -->
+    <div class="card fade-in">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:rgba(255,216,102,0.12)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M3 12h4l3-9 4 18 3-9h4" stroke="#ffd866" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="text-sm font-bold text-white">Order Book VWAP</span>
+      </div>
+      <div class="space-y-2" id="ob-vwap"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+    <!-- Slippage -->
+    <div class="card fade-in">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:rgba(255,158,100,0.12)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#ff9e64" stroke-width="2" stroke-linejoin="round"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#ff9e64" stroke-width="2" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="text-sm font-bold text-white">Slippage Estimate</span>
+      </div>
+      <div class="space-y-2" id="ob-slippage"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+    <!-- Flow Toxicity -->
+    <div class="card fade-in">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:rgba(255,59,92,0.12)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" stroke="#ff3b5c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="text-sm font-bold text-white">Flow Toxicity (VPIN)</span>
+      </div>
+      <div class="space-y-2" id="ob-toxicity"><div class="text-xs text-[#484f58] text-center py-4">Loading...</div></div>
+    </div>
+  </div>
+  <!-- Row 2: Depth Chart + Heatmap -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card fade-in" style="padding:16px">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-bold text-white">Order Book Depth</span>
+        <span class="mono text-xs text-[#8b949e]" id="ob-depth-spread">--</span>
+      </div>
+      <div id="depth-chart" style="width:100%;height:320px;"></div>
+    </div>
+    <div class="card fade-in" style="padding:16px">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-bold text-white">Order Book Heatmap</span>
+        <span class="mono text-xs text-[#8b949e]">&plusmn;2% from mid</span>
+      </div>
+      <div id="heatmap-chart" style="width:100%;height:320px;"></div>
     </div>
   </div>
 </div>
