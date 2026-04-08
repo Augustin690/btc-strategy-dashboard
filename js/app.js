@@ -141,6 +141,8 @@ async function update() {
 /**
  * Fetch and render order book analytics (runs independently from main cycle)
  */
+let lastOBChartData = null;
+
 async function updateOrderBook(currentPrice) {
   const [ob, trades] = await Promise.all([
     fetchOrderBook(1000),
@@ -157,7 +159,7 @@ async function updateOrderBook(currentPrice) {
   const obVwap = computeOBVwap(bids, asks);
   const slippage = computeSlippage(bids, asks, midPrice, [1, 5, 10, 25]);
   const vpin = computeVPIN(trades, 20);
-  const { bidDepth, askDepth } = buildDepthData(bids, asks);
+  const { bidDepth, askDepth } = buildDepthData(bids, asks, midPrice);
   const heatmap = buildHeatmapData(bids, asks, midPrice, 50);
 
   // Update UI
@@ -167,10 +169,23 @@ async function updateOrderBook(currentPrice) {
   updateToxicityPanel(vpin);
   updateDepthSpread(bids[0][0], asks[0][0]);
 
-  // Render charts
+  // Store chart data for re-render on toggle
+  lastOBChartData = { bidDepth, askDepth, midPrice, bins: heatmap.bins, maxVol: heatmap.maxVol };
+
+  // Render charts (will skip if section is hidden)
   renderDepthChart({ bidDepth, askDepth, midPrice });
   renderHeatmapChart({ bins: heatmap.bins, maxVol: heatmap.maxVol, midPrice });
 }
+
+// Re-render OB charts when section becomes visible (toggle fires window resize)
+window.addEventListener('resize', () => {
+  if (!lastOBChartData) return;
+  const section = document.getElementById('ob-section');
+  if (section && !section.classList.contains('hidden')) {
+    renderDepthChart({ bidDepth: lastOBChartData.bidDepth, askDepth: lastOBChartData.askDepth, midPrice: lastOBChartData.midPrice });
+    renderHeatmapChart({ bins: lastOBChartData.bins, maxVol: lastOBChartData.maxVol, midPrice: lastOBChartData.midPrice });
+  }
+});
 
 /**
  * Find swing lows (local minima within a window)

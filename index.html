@@ -201,7 +201,7 @@ body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-primary); 
 
 <!-- Order Book Analytics Toggle -->
 <div class="max-w-[1440px] mx-auto px-6 py-2 pb-2">
-  <button id="ob-toggle" onclick="document.getElementById('ob-section').classList.toggle('hidden');this.querySelector('.ob-arrow').classList.toggle('rotate-180')" class="w-full card flex items-center justify-between cursor-pointer hover:border-[#30363d] transition-all">
+  <button id="ob-toggle" onclick="document.getElementById('ob-section').classList.toggle('hidden');this.querySelector('.ob-arrow').classList.toggle('rotate-180');setTimeout(()=>window.dispatchEvent(new Event('resize')),50)" class="w-full card flex items-center justify-between cursor-pointer hover:border-[#30363d] transition-all">
     <div class="flex items-center gap-3">
       <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(88,166,255,0.12)">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M3 3v18h18" stroke="#58a6ff" stroke-width="2" stroke-linecap="round"/><path d="M7 16l4-4 4 4 4-8" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
