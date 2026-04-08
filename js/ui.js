@@ -32,7 +32,7 @@ export function updateRefreshCountdown(seconds) {
 
 // ─── Metrics Row ───
 
-export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, ema9, ema21, macd, macdPrev }) {
+export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, chopValue, ema9, ema21, macd, macdPrev }) {
   const priceEl = document.getElementById('m-price');
   const changeEl = document.getElementById('m-change');
   const rangeLow = document.getElementById('range-low');
@@ -67,6 +67,18 @@ export function updateMetrics({ ticker, rsiValue, atrValue, atrPct, ema9, ema21,
   }
   if (atrVal) atrVal.textContent = '$' + (atrValue != null ? Math.round(atrValue) : '--');
   if (atrPctEl) atrPctEl.textContent = (atrPct != null ? atrPct.toFixed(2) : '--') + '% volatility';
+  const chopVal = document.getElementById('chop-value');
+  const chopBadge = document.getElementById('chop-badge');
+  if (chopVal) chopVal.textContent = chopValue != null ? chopValue.toFixed(1) : '--';
+  if (chopBadge) {
+    let label, type;
+    if (chopValue == null) { label = '--'; type = 'neutral'; }
+    else if (chopValue >= 61.8) { label = 'Choppy'; type = 'bear'; }
+    else if (chopValue <= 38.2) { label = 'Trending'; type = 'bull'; }
+    else { label = 'Transitioning'; type = 'neutral'; }
+    chopBadge.textContent = label;
+    chopBadge.className = 'badge badge-' + type;
+  }
   if (emaVal) emaVal.innerHTML = `${fmt(ema9)} <span class="text-[#484f58]">/</span> ${fmt(ema21)}`;
   if (emaBadge) {
     emaBadge.textContent = ema9 > ema21 ? '9 > 21' : '9 < 21';

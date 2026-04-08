@@ -122,6 +122,42 @@ export function computeATR(highs, lows, closes, period) {
 }
 
 /**
+ * Choppiness Index
+ * CHOP = 100 * LOG10(SUM(ATR(1), period) / (HH - LL)) / LOG10(period)
+ * >61.8 = choppy/consolidation, <38.2 = trending
+ * @param {number[]} highs
+ * @param {number[]} lows
+ * @param {number[]} closes
+ * @param {number} period
+ * @returns {(number|null)[]}
+ */
+export function computeChop(highs, lows, closes, period) {
+  // True Range series (ATR period=1)
+  const tr = [highs[0] - lows[0]];
+  for (let i = 1; i < closes.length; i++) {
+    tr.push(Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    ));
+  }
+  const chop = new Array(closes.length).fill(null);
+  const log10Period = Math.log10(period);
+  for (let i = period - 1; i < closes.length; i++) {
+    let sumTR = 0;
+    let hh = -Infinity, ll = Infinity;
+    for (let j = i - period + 1; j <= i; j++) {
+      sumTR += tr[j];
+      if (highs[j] > hh) hh = highs[j];
+      if (lows[j] < ll) ll = lows[j];
+    }
+    const range = hh - ll;
+    chop[i] = range > 0 ? 100 * Math.log10(sumTR / range) / log10Period : 50;
+  }
+  return chop;
+}
+
+/**
  * MACD (12, 26, 9)
  * @param {number[]} data - Close prices
  * @returns {{ macd: number[], signal: number[], histogram: number[] }}
@@ -150,6 +186,7 @@ export function computeAll(ohlcv, config) {
     bb: computeBB(closes, config.bbPeriod, config.bbMult),
     rsi: computeRSI(closes, config.rsiPeriod),
     atr: computeATR(highs, lows, closes, config.atrPeriod),
+    chop: computeChop(highs, lows, closes, config.chopPeriod || 14),
     macd: computeMACD(closes),
   };
 }

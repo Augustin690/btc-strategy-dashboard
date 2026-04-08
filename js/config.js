@@ -11,6 +11,7 @@ export const CONFIG = {
   bbPeriod: 20,
   bbMult: 2,
   atrPeriod: 14,
+  chopPeriod: 14,
 };
 
 export const BINANCE_BASE = 'https://api.binance.com/api/v3';
